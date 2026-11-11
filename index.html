@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMC High-Performance Trading Dashboard</title>
+    <title>SMC Pro | Advanced Trading Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for advanced UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="dashboard-header">
-        <div class="logo">📈 SMC Pro Dashboard</div>
+        <div class="logo">
+            <span class="glow-text">📈 SMC PRO</span> Terminal
+        </div>
         <div class="controls">
-            <span id="connectionStatus" class="status disconnected">Disconnected</span>
+            <div class="status-container">
+                <span id="connectionStatus" class="status disconnected">
+                    <span class="dot"></span> Disconnected
+                </span>
+            </div>
             <button id="btnStart" class="btn btn-start">▶ Start Auto-Scan</button>
             <button id="btnStop" class="btn btn-stop" disabled>⏹ Stop</button>
         </div>
@@ -20,17 +28,20 @@
         <!-- Chart Container -->
         <div class="chart-container">
             <canvas id="chartCanvas"></canvas>
-            <div id="chartOverlay" class="chart-overlay">Press Start to Load Data</div>
+            <div id="chartOverlay" class="chart-overlay">
+                <div class="spinner" id="loadingSpinner"></div>
+                <p id="overlayText">Press Start to Load Data</p>
+            </div>
         </div>
 
         <!-- Debug & Signal Log Panel -->
         <aside class="log-panel">
             <div class="log-header">
-                <h3>🧠 SMC Debug Log</h3>
+                <h3>🧠 SMC Algorithm Log</h3>
                 <button id="btnClearLog" class="btn-small">Clear</button>
             </div>
             <div id="debugLog" class="log-content">
-                <div class="log-entry info">System initialized. Waiting for start...</div>
+                <div class="log-entry info">System initialized. Waiting for user action...</div>
             </div>
         </aside>
     </main>
