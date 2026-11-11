@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMC High-Performance Trading Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="logo">📈 SMC Pro Dashboard</div>
+        <div class="controls">
+            <span id="connectionStatus" class="status disconnected">Disconnected</span>
+            <button id="btnStart" class="btn btn-start">▶ Start Auto-Scan</button>
+            <button id="btnStop" class="btn btn-stop" disabled>⏹ Stop</button>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <!-- Chart Container -->
+        <div class="chart-container">
+            <canvas id="chartCanvas"></canvas>
+            <div id="chartOverlay" class="chart-overlay">Press Start to Load Data</div>
+        </div>
+
+        <!-- Debug & Signal Log Panel -->
+        <aside class="log-panel">
+            <div class="log-header">
+                <h3>🧠 SMC Debug Log</h3>
+                <button id="btnClearLog" class="btn-small">Clear</button>
+            </div>
+            <div id="debugLog" class="log-content">
+                <div class="log-entry info">System initialized. Waiting for start...</div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Main Application Logic -->
+    <script src="main.js"></script>
+</body>
+</html>
