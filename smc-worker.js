@@ -43,7 +43,6 @@ function detectFVG(candles) {
     const fvgs = [];
     for (let i = 2; i < candles.length; i++) {
         const c1 = candles[i - 2];
-        const c2 = candles[i - 1]; 
         const c3 = candles[i];
 
         if (c3.low > c1.high) {
