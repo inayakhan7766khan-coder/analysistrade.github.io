@@ -3,50 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMC Pro | Advanced Trading Dashboard</title>
+    <title>SMC Pro | Live Gold Terminal</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts for advanced UI -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div class="scanlines"></div>
+
     <header class="dashboard-header">
         <div class="logo">
-            <span class="glow-text">📈 SMC PRO</span> Terminal
+            <span class="glow-text">📈 SMC PRO</span> <span class="sub-logo">GOLD LIVE</span>
         </div>
+        
+        <div class="price-ticker">
+            <span class="pair">XAU/USD</span>
+            <span id="livePrice" class="price">0.00</span>
+        </div>
+
         <div class="controls">
+            <div class="timeframe-selector" id="timeframeSelector">
+                <button class="tf-btn active" data-tf="1m">1m</button>
+                <button class="tf-btn" data-tf="5m">5m</button>
+                <button class="tf-btn" data-tf="15m">15m</button>
+                <button class="tf-btn" data-tf="1H">1H</button>
+            </div>
+
             <div class="status-container">
                 <span id="connectionStatus" class="status disconnected">
-                    <span class="dot"></span> Disconnected
+                    <span class="dot"></span> OFF
                 </span>
             </div>
-            <button id="btnStart" class="btn btn-start">▶ Start Auto-Scan</button>
-            <button id="btnStop" class="btn btn-stop" disabled>⏹ Stop</button>
+            <button id="btnStart" class="btn btn-start"><span>▶</span> START</button>
+            <button id="btnStop" class="btn btn-stop" disabled><span>⏹</span> STOP</button>
         </div>
     </header>
 
     <main class="dashboard-main">
-        <!-- Chart Container -->
         <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">XAU/USD ANALYSIS: <span id="activeTfLabel">1m</span></span>
+            </div>
             <canvas id="chartCanvas"></canvas>
             <div id="chartOverlay" class="chart-overlay">
                 <div class="spinner" id="loadingSpinner"></div>
-                <p id="overlayText">Press Start to Load Data</p>
+                <p id="overlayText">CONNECTING TO LIVE FEED</p>
             </div>
         </div>
 
-        <!-- Debug & Signal Log Panel -->
         <aside class="log-panel">
             <div class="log-header">
-                <h3>🧠 SMC Algorithm Log</h3>
-                <button id="btnClearLog" class="btn-small">Clear</button>
+                <h3>🧠 EXECUTION LOG</h3>
+                <button id="btnClearLog" class="btn-small">CLEAR</button>
             </div>
             <div id="debugLog" class="log-content">
-                <div class="log-entry info">System initialized. Waiting for user action...</div>
+                <div class="log-entry info"><span class="time">[SYS]</span> Terminal ready. Awaiting live feed...</div>
             </div>
         </aside>
     </main>
 
-    <!-- Main Application Logic -->
     <script src="main.js"></script>
 </body>
 </html>
