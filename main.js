@@ -1,3 +1,36 @@
+// --- GLOBAL FUNCTIONS (Defined at top so buttons never fail) ---
+window.toggleSettings = function() { 
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.classList.toggle('hidden'); 
+};
+
+window.applySettings = function() {
+    CONFIG.swingLengthHTF = parseInt(document.getElementById('settingsSwingHTF').value);
+    CONFIG.swingLengthLTF = parseInt(document.getElementById('settingsSwingLTF').value);
+    window.toggleSettings();
+    if (window.runAnalysis) window.runAnalysis();
+};
+
+window.changeTimeframe = function(tf) {
+    try {
+        document.querySelectorAll('.tf-btn').forEach(btn => btn.className = 'tf-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:bg-gray-700/50 transition-all');
+        const activeBtn = document.querySelector(`[data-tf="${tf}"]`);
+        if(activeBtn) activeBtn.className = 'tf-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all';
+        
+        CONFIG.ltfInterval = tf;
+        state.ltfData = []; 
+        state.currentLTFCandle = null;
+        if (state.candleSeries) state.candleSeries.setData([]);
+    } catch (e) {
+        console.error("Timeframe change error:", e);
+    }
+};
+
+window.toggleOB = function() { state.overlays.ob = !state.overlays.ob; document.getElementById('obToggle').style.opacity = state.overlays.ob ? '1' : '0.4'; window.drawOverlays(); };
+window.toggleFVG = function() { state.overlays.fvg = !state.overlays.fvg; document.getElementById('fvgToggle').style.opacity = state.overlays.fvg ? '1' : '0.4'; window.drawOverlays(); };
+window.toggleLiquidity = function() { state.overlays.liquidity = !state.overlays.liquidity; document.getElementById('liqToggle').style.opacity = state.overlays.liquidity ? '1' : '0.4'; window.drawOverlays(); };
+window.toggleSwings = function() { state.overlays.swings = !state.overlays.swings; document.getElementById('swingToggle').style.opacity = state.overlays.swings ? '1' : '0.4'; };
+
 // --- DOM Elements ---
 const livePriceEl = document.getElementById('currentPrice');
 
@@ -23,7 +56,7 @@ let state = {
     overlays: { ob: true, fvg: true, liquidity: true, swings: true },
     ws: null,
     lastScanTime: 0,
-    useBinanceFallback: false // Fallback flag
+    useBinanceFallback: false
 };
 
 const TF_MS = {
@@ -44,7 +77,7 @@ try {
             const signalResult = e.data.data.signalResult;
             
             updateUI(signalResult);
-            drawOverlays();
+            window.drawOverlays();
             
             document.getElementById('lastScan').textContent = `Last scan: ${new Date().toLocaleTimeString()}`;
             if (signalResult.signal) addToHistory(signalResult);
@@ -78,10 +111,10 @@ function initChart() {
     }
 }
 
-// --- WebSocket Connection (with Fallback) ---
+// --- WebSocket Connection ---
 function initWebSocket() {
     if (state.ws) {
-        state.ws.onclose = null; // Prevent reconnection loop
+        state.ws.onclose = null;
         state.ws.close();
     }
 
@@ -103,11 +136,8 @@ function initWebSocket() {
         document.getElementById('statusDot').className = 'pulse-dot bg-green-400';
         
         if (!state.useBinanceFallback) {
-            state.ws.send(JSON.stringify({
-                type: "subscribe", channel: "asset_prices", symbols: ["XAUUSD"]
-            }));
+            state.ws.send(JSON.stringify({ type: "subscribe", channel: "asset_prices", symbols: ["XAUUSD"] }));
         }
-        // For Binance, the ticker stream automatically starts sending data. No subscription needed.
 
         document.getElementById('chartLoading').style.opacity = '0';
         setTimeout(() => { document.getElementById('chartLoading').style.display = 'none'; }, 500);
@@ -116,13 +146,9 @@ function initWebSocket() {
     state.ws.onmessage = (event) => {
         try {
             if (state.useBinanceFallback) {
-                // Binance ticker format
                 const msg = JSON.parse(event.data);
-                if (msg.c) { // 'c' is the close price in Binance ticker
-                    handleTick(parseFloat(msg.c), msg.E);
-                }
+                if (msg.c) handleTick(parseFloat(msg.c), msg.E);
             } else {
-                // Bayse format
                 const lines = event.data.split('\n');
                 for (const line of lines) {
                     if (!line.trim()) continue;
@@ -132,23 +158,12 @@ function initWebSocket() {
                     }
                 }
             }
-        } catch (err) {
-            console.error("WS Parse Error:", err);
-        }
-    };
-
-    state.ws.onerror = (err) => {
-        console.error("WS Error:", err);
-        // Do not immediately switch; let onclose handle it
+        } catch (err) { console.error("WS Parse Error:", err); }
     };
 
     state.ws.onclose = () => {
-        // If Bayse fails, switch to Binance fallback
-        if (!state.useBinanceFallback) {
-            console.log("Bayse connection failed. Switching to Binance PAXG fallback...");
-            switchToFallback();
-        } else {
-            // If fallback also closes, attempt to reconnect after a delay
+        if (!state.useBinanceFallback) switchToFallback();
+        else {
             document.getElementById('botStatus').textContent = 'Disconnected. Retrying...';
             document.getElementById('statusContainer').className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20';
             document.getElementById('statusDot').className = 'pulse-dot bg-red-400';
@@ -156,22 +171,15 @@ function initWebSocket() {
         }
     };
 
-    // Set a timeout to switch to fallback if connection doesn't open within 3 seconds
     setTimeout(() => {
-        if (state.ws && state.ws.readyState !== WebSocket.OPEN) {
-            console.log("Bayse connection timeout. Switching to Binance fallback...");
-            switchToFallback();
-        }
+        if (state.ws && state.ws.readyState !== WebSocket.OPEN) switchToFallback();
     }, 3000);
 }
 
 function switchToFallback() {
-    if (state.useBinanceFallback) return; // Already using fallback
+    if (state.useBinanceFallback) return;
     state.useBinanceFallback = true;
-    if (state.ws) {
-        state.ws.onclose = null;
-        state.ws.close();
-    }
+    if (state.ws) { state.ws.onclose = null; state.ws.close(); }
     initWebSocket();
 }
 
@@ -180,7 +188,6 @@ function handleTick(price, time) {
     const now = Date.now();
     livePriceEl.textContent = price.toFixed(2);
     
-    // LTF Candle
     const ltfMs = TF_MS[CONFIG.ltfInterval];
     const ltfBucket = Math.floor(time / ltfMs) * ltfMs;
     
@@ -196,7 +203,6 @@ function handleTick(price, time) {
         state.currentLTFCandle.close = price;
     }
 
-    // HTF Candle
     const htfBucket = Math.floor(time / (60 * 60 * 1000)) * (60 * 60 * 1000);
     if (!state.currentHTFCandle || state.currentHTFCandle.time < htfBucket / 1000) {
         if (state.currentHTFCandle) {
@@ -210,21 +216,18 @@ function handleTick(price, time) {
         state.currentHTFCandle.close = price;
     }
 
-    // Update Chart
     if (state.candleSeries && state.currentLTFCandle) {
         state.candleSeries.update(state.currentLTFCandle);
     }
 
-    // Send to Worker for Analysis (Throttled)
     if (!state.lastScanTime || now - state.lastScanTime > 2000) {
-        runAnalysis();
+        window.runAnalysis();
         state.lastScanTime = now;
     }
 }
 
-// --- Trigger Analysis ---
-function runAnalysis() {
-    if (!smcWorker) return; // Worker failed to initialize
+window.runAnalysis = function() {
+    if (!smcWorker) return;
     if (state.ltfData.length < 5 || state.htfData.length < 3) return;
 
     smcWorker.postMessage({
@@ -235,9 +238,8 @@ function runAnalysis() {
             config: CONFIG
         }
     });
-}
+};
 
-// --- UI Updates ---
 function updateUI(res) {
     try {
         if (!state.htfAnalysis || !state.ltfAnalysis) return;
@@ -263,13 +265,11 @@ function updateUI(res) {
         document.getElementById('obCount').textContent = htf.orderBlocks.length;
         document.getElementById('fvgCount').textContent = htf.fvgs.length;
 
-        // AMD
         document.querySelectorAll('.amd-phase').forEach(el => { el.classList.remove('active'); el.style.borderColor = 'rgba(75, 85, 99, 0.5)'; el.style.background = 'rgba(31, 41, 55, 0.5)'; });
         const activeAmd = document.querySelector(`[data-phase="${res.amd.phase}"]`);
         if (activeAmd) { activeAmd.classList.add('active'); activeAmd.style.borderColor = 'rgba(255, 215, 0, 0.5)'; activeAmd.style.background = 'rgba(255, 215, 0, 0.05)'; }
         document.getElementById('amdDescription').textContent = res.amd.description;
 
-        // LTF
         document.getElementById('ltfStructure').innerHTML = ltf.ltfStructure 
             ? `<span class="${ltf.ltfStructure.includes('BULLISH') ? 'text-green-400' : 'text-red-400'} text-xs font-semibold px-2 py-0.5 rounded-full ${ltf.ltfStructure.includes('BULLISH') ? 'bg-green-500/10' : 'bg-red-500/10'}">${ltf.ltfStructure}</span>` 
             : '<span class="text-gray-400 text-xs">No shift</span>';
@@ -278,7 +278,6 @@ function updateUI(res) {
         document.getElementById('inHTFPOI').innerHTML = ltf.priceInHTFPOI ? '<span class="text-green-400 text-xs">✅ Yes</span>' : '<span class="text-red-400 text-xs">❌ No</span>';
         document.getElementById('poiType').textContent = ltf.poiType || '---';
 
-        // Conditions
         document.getElementById('conditionsList').innerHTML = res.conditions.map((c, i) => `
             <div class="condition-item ${c.met ? 'met' : 'unmet'} rounded-lg p-3 flex items-center gap-3 animate-slide-in" style="animation-delay: ${i * 0.1}s">
                 <i class="${c.met ? 'ri-checkbox-circle-fill text-green-400' : 'ri-close-circle-fill text-red-400'}"></i>
@@ -287,7 +286,6 @@ function updateUI(res) {
             </div>
         `).join('');
 
-        // Strength
         const strength = (res.conditionsMet / 5) * 100;
         document.getElementById('progressCircle').style.strokeDashoffset = 314 - (strength / 100) * 314;
         document.getElementById('strengthValue').textContent = `${Math.round(strength)}%`;
@@ -298,7 +296,6 @@ function updateUI(res) {
         else if (strength >= 50) { confEl.textContent = 'Medium'; confEl.className = 'text-lg font-bold mono text-yellow-400'; }
         else { confEl.textContent = 'Low'; confEl.className = 'text-lg font-bold mono text-red-400'; }
 
-        // Signal Output
         const sigMsg = document.getElementById('signalMessage');
         const sigCard = document.getElementById('signalCard');
         
@@ -339,19 +336,16 @@ function updateUI(res) {
             sigMsg.innerHTML = `<div class="text-center"><div class="text-2xl mb-2">🔍</div><div class="text-sm text-gray-400">SCANNING... ${res.conditionsMet}/5 conditions met</div><div class="text-xs text-gray-600 mt-2">${res.conditions.filter(c => !c.met)[0]?.name || 'Analyzing...'}</div></div>`;
         }
 
-        // Swings
         document.getElementById('swingPointsList').innerHTML = ltf.swings.slice(-6).reverse().map(s => `
             <div class="flex items-center justify-between p-2 rounded-lg ${s.type === 'Swing_High' ? 'bg-red-500/5' : 'bg-green-500/5'}">
                 <div class="flex items-center gap-2"><i class="${s.type === 'Swing_High' ? 'ri-arrow-down-s-line text-red-400' : 'ri-arrow-up-s-line text-green-400'}"></i><span class="text-xs text-gray-400">${s.type === 'Swing_High' ? 'High' : 'Low'}</span></div>
                 <span class="mono text-xs ${s.type === 'Swing_High' ? 'text-red-400' : 'text-green-400'}">${s.level.toFixed(2)}</span>
             </div>
         `).join('');
-    } catch (e) {
-        console.error("UI Update Error:", e);
-    }
+    } catch (e) { console.error("UI Update Error:", e); }
 }
 
-function drawOverlays() {
+window.drawOverlays = function() {
     try {
         if (!state.candleSeries) return;
         state.priceLines.forEach(line => state.candleSeries.removePriceLine(line));
@@ -379,9 +373,7 @@ function drawOverlays() {
         if (state.htfAnalysis && state.htfAnalysis.equilibrium) {
             state.priceLines.push(state.candleSeries.createPriceLine({ price: state.htfAnalysis.equilibrium, color: '#ffffff', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true, title: 'EQ' }));
         }
-    } catch (e) {
-        console.error("Overlay drawing error:", e);
-    }
+    } catch (e) { console.error("Overlay drawing error:", e); }
 }
 
 function addToHistory(res) {
@@ -402,42 +394,8 @@ function addToHistory(res) {
             </div>`;
         hist.insertBefore(div, hist.firstChild);
         while (hist.children.length > 5) hist.removeChild(hist.lastChild);
-    } catch (e) {
-        console.error("History error:", e);
-    }
+    } catch (e) { console.error("History error:", e); }
 }
-
-// --- Global Functions for Buttons ---
-window.changeTimeframe = function(tf) {
-    try {
-        document.querySelectorAll('.tf-btn').forEach(btn => btn.className = 'tf-btn px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:bg-gray-700/50 transition-all');
-        document.querySelector(`[data-tf="${tf}"]`).className = 'tf-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all';
-        
-        CONFIG.ltfInterval = tf;
-        state.ltfData = []; 
-        state.currentLTFCandle = null;
-        if (state.candleSeries) state.candleSeries.setData([]);
-        
-        if (state.ws) state.ws.close(); // Triggers reconnect with new timeframe logic (though WS doesn't care about TF, it's safe)
-        // No need to re-init WS, just clear data. The next tick will start a new candle.
-        // However, to be safe, we can just leave it.
-    } catch (e) {
-        console.error("Timeframe change error:", e);
-    }
-};
-
-window.toggleOB = function() { state.overlays.ob = !state.overlays.ob; document.getElementById('obToggle').style.opacity = state.overlays.ob ? '1' : '0.4'; drawOverlays(); };
-window.toggleFVG = function() { state.overlays.fvg = !state.overlays.fvg; document.getElementById('fvgToggle').style.opacity = state.overlays.fvg ? '1' : '0.4'; drawOverlays(); };
-window.toggleLiquidity = function() { state.overlays.liquidity = !state.overlays.liquidity; document.getElementById('liqToggle').style.opacity = state.overlays.liquidity ? '1' : '0.4'; drawOverlays(); };
-window.toggleSwings = function() { state.overlays.swings = !state.overlays.swings; document.getElementById('swingToggle').style.opacity = state.overlays.swings ? '1' : '0.4'; };
-
-window.toggleSettings = function() { document.getElementById('settingsModal').classList.toggle('hidden'); };
-window.applySettings = function() {
-    CONFIG.swingLengthHTF = parseInt(document.getElementById('settingsSwingHTF').value);
-    CONFIG.swingLengthLTF = parseInt(document.getElementById('settingsSwingLTF').value);
-    toggleSettings();
-    runAnalysis();
-};
 
 function updateClock() {
     const now = new Date();
@@ -454,7 +412,5 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(updateClock, 1000);
         initChart();
         initWebSocket();
-    } catch (e) {
-        console.error("Initialization error:", e);
-    }
+    } catch (e) { console.error("Initialization error:", e); }
 });
